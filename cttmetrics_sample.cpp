@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     unsigned int metric_cnt = sizeof(metrics_ids)/sizeof(metrics_ids[0]);
 
     unsigned int num_samples = 100;
-    unsigned int period_ms = 500;
+    unsigned int period_ms = 100;
 
     if (1 < argc && NULL != argv[1])
     {

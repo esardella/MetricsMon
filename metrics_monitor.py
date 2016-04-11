@@ -1,24 +1,28 @@
 from Tkinter import *
-import math, random, threading, time
+import math, random, threading, time, stat
 import os 
 import subprocess
-class StripChart:
+import atexit 
 
+
+
+
+class Monitor:
+
+    go = 0
     def __init__(self, root):
         self.gf = self.makeGraph(root)
         self.cf = self.makeControls(root)
         self.gf.pack()
         self.cf.pack()
-        self.Reset()
-
- 
+        self.Reset() 
 
     def makeGraph(self, frame):
         self.sw = 1000
         self.h = 200
         self.top = 2
         gf = Canvas(frame, width=self.sw, height=self.h+10,
-                    bg="#002", bd=0, highlightthickness=0)
+                    bg="#000", bd=0, highlightthickness=0)
         gf.p = PhotoImage(width=2*self.sw, height=self.h)
         self.item = gf.create_image(0, self.top, image=gf.p, anchor=NW)
         return(gf)
@@ -37,22 +41,27 @@ class StripChart:
 
         self.k2 = Label(cf, text="VIDEO")
         self.k2.grid(column=3, row =6)
-        self.k2.config(fg = '#4af')
+        self.k2.config(fg = '#ff0000')
         self.k2.data = Label(cf,text="")
         self.k2.data.grid(column = 4, row=6)
         
-        self.k3 = Label(cf, text="VIDEO_E")
-        self.k3.grid (column=5, row=6)
-        self.k3.config(fg = '#080')
-        self.k3.data = Label(cf,text="")
-        self.k3.data.grid(column= 6, row=6)
+
         
         self.k4 = Label(cf,text="VIDEO2")
-        self.k4.grid(column=7, row=6)
-        self.k4.config(fg = '#0f0')
+        self.k4.grid(column=5, row=6)
+        self.k4.config(fg = '#0000ff')
         self.k4.data = Label(cf,text="")
-        self.k4.data.grid(column=8, row = 6)
+        self.k4.data.grid(column=6, row = 6)
 
+        self.k3 = Label(cf, text="VIDEO_E")
+        self.k3.grid (column=7, row=6)
+        self.k3.config(fg = '#080')
+        self.k3.data = Label(cf,text="")
+        self.k3.data.grid(column= 8, row=6)
+
+        self.gf.create_text(10,10,anchor="nw",text="100%", fill="#ff0000")
+        self.gf.create_text(10,self.h -10,anchor="sw",text="0%", fill="#ff0000")
+        
         return(cf)
 
     def Run(self):
@@ -64,52 +73,63 @@ class StripChart:
 
         print "Creating Pipe"
         self.fifo = '/tmp/myfifo' 
-     
-        os.mkfifo(self.fifo)
+        try: 
+    		os.unlink(self.fifo)
+        	os.mkfifo(self.fifo)
+        except OSError, e: 
+        	os.mkfifo(self.fifo)
+        
         print "Pipe Created"
-        os.system('')
         threading.Thread(target=self.do_start, name="_gen_").start()
-        subprocess.Popen(['bash',"run.sh"])
+        self.pro = subprocess.Popen("./metrics_monitor", shell=True)
 
 
     def Stop(self):
+        if self.go == 1: 
+           self.pro.terminate()
+           os.unlink(self.fifo)
         self.go = 0
+       
         for t in threading.enumerate():
             if t.name == "_gen_":
-                t.join()
+            	print str(t)
+                t.join(1.0)
+             
 
     def Reset(self):
         self.Stop()
-        self.clearstrip(self.gf.p, '#345')
+        self.clearstrip(self.gf.p, '#000')
 
     def do_start(self):       
         metrics = []
-        while self.go:
-            with open(self.fifo, "r") as fifo:                
-                try: 
-                    line = fifo.readline()
-                    if line != "": 
-                        print line
-                        del metrics[:]
-                        fields = line.split(",")
-                        for data in fields:
-                                idx = data.find(":") 
-                                label = data[0:idx]
-                                metric= float(data[idx+1:-1])
-                                metrics.append(metric)
-                                print "Appending " + str(metric) 
-                        y3 =  metrics[0] / 100  
-                        y4 =  metrics[1] / 100  
-                        y5 =  metrics[2] / 100  
-                        y6 =  metrics[3] / 100  
-                        self.k1.data.config(text = str(metrics[0]))
-                        self.k2.data.config(text = str(metrics[1]))
-                        self.k3.data.config(text = str(metrics[2]))
-                        self.k4.data.config(text = str(metrics[3]))
-                        self.scrollstrip(self.gf.p,(y3,.25,y4,y5,y6,0.75),('#ff4','#f40','#4af','#080','#0f0','#080'),'#088')
-                except: 
-                    print "Could not read pipe"
-                    
+        fifo = open(self.fifo, "r")
+        while self.go:      
+            try: 
+                line = fifo.readline()
+                if line != "": 
+                    del metrics[:]
+                    fields = line.split(",")
+                    for data in fields:
+                            idx = data.find(":") 
+                            label = data[0:idx]
+                            metric= float(data[idx+1:-1])
+                            metrics.append(metric)
+                            #print "Appending " + str(metric) 
+                    y3 =  metrics[0] / 100  
+                    y4 =  metrics[1] / 100  
+                    y5 =  metrics[2] / 100  
+                    y6 =  metrics[3] / 100  
+                    self.k1.data.config(text = str(metrics[0]))
+                    self.k2.data.config(text = str(metrics[1]))
+                    self.k3.data.config(text = str(metrics[2]))
+                    self.k4.data.config(text = str(metrics[3]))
+                    self.scrollstrip(self.gf.p,(y3,.25,y4,y5,y6,0.75),('#ff4','#f40','#ff0000','#080','#0000ff','#080'),'#000')
+            	else:
+            		self.go = 0
+
+            except: 
+                print "Could not read pipe"
+
 
 
     def clearstrip(self, p, color):  # Fill strip with background color
@@ -119,6 +139,9 @@ class StripChart:
         p.tk.call(p, 'put', color, '-to', 0, 0, p['width'], p['height'])
 
     def scrollstrip(self, p, data, colors, bar=""):   # Scroll the strip, add new data
+        
+     
+        
         self.x = (self.x + 1) % self.sw               # x = double buffer position
         bg = bar if bar else self.bg
         p.tk.call(p, 'put', bg, '-to', self.x, 0, self.x+1, self.h)
@@ -137,10 +160,11 @@ class StripChart:
         self.data = data            # save for next call
     
 
+
 def main():
     root = Tk()
     root.title("GPU Metrics Monitor")
-    app = StripChart(root)
+    app = Monitor(root)
     root.mainloop()
 
 main()
