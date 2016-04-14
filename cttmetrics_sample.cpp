@@ -146,11 +146,11 @@ int main(int argc, char *argv[])
             fprintf(stderr, "ERROR: Failed to get metrics, error code %d\n", status);
             return 1;
         }
-	memset(buf, 0, sizeof(buf));  
-        printf("RENDER usage: %3.2f,\tVIDEO usage: %3.2f,\tVIDEO_E usage: %3.2f", metric_values[0], metric_values[1], metric_values[2]);
+	    memset(buf, 0, sizeof(buf));  
+       // printf("RENDER usage: %3.2f,\tVIDEO usage: %3.2f,\tVIDEO_E usage: %3.2f", metric_values[0], metric_values[1], metric_values[2]);
 	if (true == isVideo2)
 	 {
-            printf("\tVIDEO2 usage: %3.2f", metric_values[3]);
+          //  printf("\tVIDEO2 usage: %3.2f", metric_values[3]);
 	    sprintf(buf, "RENDER: %3.2f,VIDEO: %3.2f,VIDEO_E: %3.2f, VIDEO2: %3.2f\n", metric_values[0], metric_values[1], metric_values[2], metric_values[3]);
 	 }
 	else 
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 	    sprintf(buf, "RENDER: %3.2f,VIDEO: %3.2f,VIDEO_E: %3.2f\n", metric_values[0], metric_values[1], metric_values[2]);
 	 }
         write(fd, buf, sizeof(buf));
-        printf("\n");
+      
     }
 
     CTTMetrics_Close();

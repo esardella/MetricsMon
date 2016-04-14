@@ -59,8 +59,9 @@ class Monitor:
         self.k3.data = Label(cf,text="")
         self.k3.data.grid(column= 8, row=6)
 
-        self.gf.create_text(10,10,anchor="nw",text="100%", fill="#ff0000")
-        self.gf.create_text(10,self.h -10,anchor="sw",text="0%", fill="#ff0000")
+        self.gf.create_text(10,10,anchor="nw",text="100%", fill="#00bfff")
+        self.gf.create_text(10, (self.h -10)* .50,anchor="nw",text="50%", fill="#00bfff")
+        self.gf.create_text(10,self.h -10,anchor="sw",text="0%", fill="#00bfff")
         
         return(cf)
 
@@ -71,7 +72,6 @@ class Monitor:
                 print("already running")
                 return
 
-        print "Creating Pipe"
         self.fifo = '/tmp/myfifo' 
         try: 
     		os.unlink(self.fifo)
@@ -79,9 +79,8 @@ class Monitor:
         except OSError, e: 
         	os.mkfifo(self.fifo)
         
-        print "Pipe Created"
-        threading.Thread(target=self.do_start, name="_gen_").start()
-        self.pro = subprocess.Popen("./metrics_monitor", shell=True)
+        threading.Thread(target=self.do_start, name="_metricsmon_").start()
+        self.pro = subprocess.Popen("./metrics_monitor 100 100", shell=True)
 
 
     def Stop(self):
@@ -91,14 +90,14 @@ class Monitor:
         self.go = 0
        
         for t in threading.enumerate():
-            if t.name == "_gen_":
-            	print str(t)
+            if t.name == "_metricsmon_":
                 t.join(1.0)
              
 
     def Reset(self):
         self.Stop()
-        self.clearstrip(self.gf.p, '#000')
+        self.clear(self.gf.p, '#000')
+
 
     def do_start(self):       
         metrics = []
@@ -114,7 +113,6 @@ class Monitor:
                             label = data[0:idx]
                             metric= float(data[idx+1:-1])
                             metrics.append(metric)
-                            #print "Appending " + str(metric) 
                     y3 =  metrics[0] / 100  
                     y4 =  metrics[1] / 100  
                     y5 =  metrics[2] / 100  
@@ -123,40 +121,41 @@ class Monitor:
                     self.k2.data.config(text = str(metrics[1]))
                     self.k3.data.config(text = str(metrics[2]))
                     self.k4.data.config(text = str(metrics[3]))
-                    self.scrollstrip(self.gf.p,(y3,.25,y4,y5,y6,0.75),('#ff4','#f40','#ff0000','#080','#0000ff','#080'),'#000')
+                    self.scroll(self.gf.p,(y3,.25,y4,y5,y6,0.75),('#ff4','#bebebe','#ff0000','#080','#0000ff','#bebebe'),'#000')
             	else:
             		self.go = 0
 
             except: 
-                print "Could not read pipe"
+                print "Could not read named pipe"
 
 
 
-    def clearstrip(self, p, color):  # Fill strip with background color
+    def clear(self, p, color):  # Fill strip with background color
         self.bg = color              # save background color for scroll
         self.data = None             # clear previous data
         self.x = 0
         p.tk.call(p, 'put', color, '-to', 0, 0, p['width'], p['height'])
 
-    def scrollstrip(self, p, data, colors, bar=""):   # Scroll the strip, add new data
-        
-     
+    def scroll(self, p, data, colors, bar=""):   # Scroll the strip, add new data
         
         self.x = (self.x + 1) % self.sw               # x = double buffer position
         bg = bar if bar else self.bg
+ 
         p.tk.call(p, 'put', bg, '-to', self.x, 0, self.x+1, self.h)
         p.tk.call(p, 'put', bg, '-to', self.x+self.sw, 0, self.x+self.sw+1, self.h)
         self.gf.coords(self.item, -1-self.x, self.top)  # scroll to just-written column
         if not self.data:
             self.data = data
+        #self.x = (self.x - 9) % self.sw
         for d in range(len(data)):
             y0 = int((self.h-1) * (1.0-self.data[d]))   # plot all the data points
-            y1 = int((self.h-1) * (1.0-data[d]))
-     
+            y1 = int((self.h-1) * (1.0-data[d])) 
+             
             ya, yb = sorted((y0, y1))
             for y in range(ya, yb+1):                   # connect the dots
                 p.put(colors[d], (self.x,y))
                 p.put(colors[d], (self.x+self.sw,y))
+              
         self.data = data            # save for next call
     
 
